@@ -1,10 +1,12 @@
 
 
+from prompt_toolkit.application import get_app
 from prompt_toolkit.input.posix_pipe import PosixPipeInput
 from prompt_toolkit.layout.screen import Size
 from prompt_toolkit.output.vt100 import Vt100_Output
+from prompt_toolkit.eventloop.context import context
 from prompt_toolkit.eventloop.defaults import use_asyncio_event_loop
-from prompt_toolkit import PromptSession, print_formatted_text
+from prompt_toolkit import prompt, print_formatted_text
 from prompt_toolkit.formatted_text import FormattedText, to_formatted_text
 
 
@@ -54,7 +56,7 @@ def create_raw_prompt(reader, writer):
 
 async def create_full_prompt(process):
     # Mandatory from prompt_toolkit
-    app = None
+    context_id = None
     use_asyncio_event_loop()
 
     # Size getter
@@ -64,8 +66,8 @@ async def create_full_prompt(process):
 
     # Set up resize event
     def size_changed(*_):
-        if app is not None:
-            app.invalidate()
+        with context(context_id):
+            get_app()._on_resize()
     process.terminal_size_changed = size_changed
 
     # Prepare input stream
@@ -93,17 +95,12 @@ async def create_full_prompt(process):
     # Define local prompt
 
     async def aprompt(*args, **kwargs):
-        nonlocal app
+        nonlocal context_id
         kwargs['async_'] = True
-        history = kwargs.pop('history', None)
-        input = kwargs.pop('input', vt100_input)
-        output = kwargs.pop('output', vt100_output)
-        session = PromptSession(input=input, output=output, history=history)
-        try:
-            app = session.app
-            return await session.prompt(*args, **kwargs)
-        finally:
-            app = None
+        kwargs['input'] = vt100_input
+        kwargs['output'] = vt100_output
+        with context() as context_id:
+            return await prompt(*args, **kwargs)
 
     aprint.sprint = sprint
     return aprint, aprompt
