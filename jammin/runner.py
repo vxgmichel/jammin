@@ -77,7 +77,7 @@ async def create_runner(user, runner_program):
 
     # Start the runner process
     runner = await asyncio.create_subprocess_exec(
-        *runner_program,
+        str(runner_program),
         f"{seed}",
         f"{input_write}",
         f"{output_read}",

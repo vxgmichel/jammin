@@ -25,6 +25,7 @@ class Session:
     aprompt: object
     interactive: bool = False
     configuration: object = field(default_factory=get_configuration)
+    db: object = field(default_factory=lambda: get_configuration().db)
 
 
 def get_command_dict():
@@ -127,8 +128,7 @@ def show_parser():
 
 async def show_command(session):
     columns = session.aprompt.get_size().columns
-    with open(session.configuration.description) as f:
-        data = mdv.main(f.read(), cols=columns)
+    data = mdv.main(session.configuration.description, cols=columns)
     await session.aprint(ANSI(data))
 
 
@@ -147,7 +147,7 @@ def claim_parser():
 async def claim_command(session, username):
     # Get user
     try:
-        token = claim_user(username)
+        token = await session.db.create_user(username)
     except ValueError:
         await session.aprint(
             "This user name is already taken :)")
@@ -186,7 +186,7 @@ async def request_command(session, token):
 
     # Get user
     try:
-        user = get_user(token)
+        user = (await session.db.get_user(token))["nick"]
     except KeyError:
         await session.aprint(
             "Authentification failed: this token is not valid :(")
@@ -226,7 +226,7 @@ async def submit_command(session, token):
 
     # Get user
     try:
-        user = get_user(token)
+        user = (await session.db.get_user(token))["nick"]
     except KeyError:
         await session.aprint(
             "Authentification failed: this token is not valid :(")
@@ -304,8 +304,10 @@ async def interact_command(session):
     def bottom_toolbar():
         return HTML(
             'There are '
-            f'<b><style bg="ansired">{len(get_users())} claimed users</style> '
-            'at the moment</b>!')
+            '<b><style bg="ansired">'
+            f'{session.db.nb_users} claimed users'
+            '</style></b> '
+            'at the moment!')
 
     while True:
         try:

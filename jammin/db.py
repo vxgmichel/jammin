@@ -106,28 +106,37 @@ class DB:
         metadata.create_all()
         conn = await engine.connect()
 
-        return cls(challenges_dir, engine, conn)
+        instance = cls(challenges_dir, engine, conn)
+        instance.nb_users = len(await instance.get_users())
+        return instance
 
     def __init__(self, challenges_dir, engine, conn):
+        self.nb_users = None
         self.challenges_dir = challenges_dir
         self.engine = engine
         self.conn = conn
 
     def get_challenges(self):
-        confs = []
+        confs = {}
         for conf_file in self.challenges_dir.glob('*/challenge.toml'):
-            confs.append(_parse_challenge_conf(conf_file))
+            conf = _parse_challenge_conf(conf_file)
+            confs[conf["name"]] = conf
         return confs
 
     async def create_user(self, nick):
         token = secrets.token_hex(8)
-        await self.conn.execute(users.insert().values(
-            nick=nick, token=token, score=0
-        ))
-        return await self.get_user(nick)
+        try:
+            await self.conn.execute(users.insert().values(
+                nick=nick, token=token, score=0
+            ))
+        except IntegrityError:
+            raise ValueError(f"User {nick} already exists")
+        self.nb_users += 1
+        return token
 
-    async def get_user(self, nick):
-        result = await self.conn.execute(users.select().where(users.c.nick==nick))
+    async def get_user(self, token):
+        result = await self.conn.execute(
+            users.select().where(users.c.token == token))
         return _row_to_user(await result.fetchone())
 
     async def get_users(self):

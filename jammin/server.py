@@ -21,19 +21,18 @@ def keyboard_interrupt_control(loop=None):
 
 
 async def amain(namespace):
-    db = await DB.init(challenges_dir=namespace.challenges, dburl=namespace.db)
-    # b1 = await db.create_user('billy')
-    # b2 = await db.create_user('bob')
-    # # await db.create_user('billy')
-    # b3 = await db.get_user('billy')
-    # users = await db.get_users()
-    # await db.create_attempt('billy', 'foo', False)
-    # await db.create_attempt('billy', 'bar', True)
-    # await db.create_attempt('bob', 'foo', False)
-    # res = await db.get_user_attempts('billy')
-    # res2 = await db.get_challenge_attempts('foo')
-    # c = db.get_challenges()
     set_configuration(namespace)
+    namespace.db = await DB.init(
+        challenges_dir=namespace.challenges, dburl=namespace.db)
+    try:
+        challenges = namespace.db.get_challenges()
+        namespace.challenge = challenges[namespace.challenge]
+    except KeyError:
+        print(f"Challenge {namespace.challenge} not found :(")
+        return
+    namespace.interactive = namespace.challenge["interactive"]
+    namespace.description = namespace.challenge["subject"]
+    namespace.runner = namespace.challenge["runner"]
     if not hasattr(namespace, "started"):
         namespace.started = asyncio.Event()
 
@@ -69,10 +68,13 @@ def main(args=None):
                         help='port for the tcp interface')
 
     parser.add_argument('--db', default='sqlite:///db.sqlite',
-                        help='Path to the database (default: sqlite:///db.sqlite)')
+                        help='path to the database (default: sqlite:///db.sqlite)')
 
     parser.add_argument('--challenges', default='.',
-                        help='Path to the directory containing the challenges (default: current directory)')
+                        help='path to the directory containing the challenges (default: current directory)')
+
+    parser.add_argument('challenge', type=str,
+                        help='name of the challenge to run')
 
     namespace = parser.parse_args(args)
     return asyncio.run(amain(namespace))
