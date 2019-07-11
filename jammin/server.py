@@ -64,6 +64,9 @@ def main(args=None):
     parser.add_argument('-i', '--interactive', action="store_true",
                         help='indicates an interactive problem')
 
+    parser.add_argument('description', metavar='DESC', type=str,
+                        help='the markdown file containing the problem description')
+
     parser.add_argument('runner', metavar='RUNNER', type=str,
                         help='the problem runner program')
 

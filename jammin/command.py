@@ -3,7 +3,9 @@ import argparse
 from datetime import datetime
 from dataclasses import dataclass, field
 
-from prompt_toolkit import HTML
+import mdv
+
+from prompt_toolkit import HTML, ANSI
 from prompt_toolkit.styles import Style
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.completion import WordCompleter
@@ -26,13 +28,19 @@ class Session:
     configuration: object = field(default_factory=get_configuration)
 
 
+def get_command_dict():
+    return {
+        "help": (help_command, help_parser),
+        "show": (show_command, show_parser),
+        "claim": (claim_command, claim_parser),
+        "request": (request_command, request_parser),
+        "submit": (submit_command, submit_parser),
+        "interact": (interact_command, interact_parser),
+    }
+
+
 def get_command(name, aprint):
-    command, get_parser = {
-        "claim": (claim, claim_parser),
-        "request": (request, request_parser),
-        "submit": (submit, submit_parser),
-        "interact": (interact, interact_parser),
-    }[name]
+    command, get_parser = get_command_dict()[name]
     parser = get_parser()
 
     # Patch print_message so the parser prints to our console
@@ -83,6 +91,42 @@ async def run_command(command, aprint, aprompt, interactive=False):
     return status
 
 
+# Help command
+
+def help_parser():
+    parser = argparse.ArgumentParser(
+        prog="help",
+        description='Show the help message')
+    return parser
+
+
+async def help_command(session):
+
+    await session.aprint(HTML(
+        "<skyblue>Welcome this SSH problem solving interface! :)</skyblue>"))
+    await session.aprint()
+    await session.aprint("""Here the list of commands:""")
+    for name, (_, get_parser) in get_command_dict().items():
+        await session.aprint(f" - {name:9s}: {get_parser().description}")
+    await session.aprint()
+
+
+# Show command
+
+def show_parser():
+    parser = argparse.ArgumentParser(
+        prog="show",
+        description='Show the problem description')
+    return parser
+
+
+async def show_command(session):
+    columns = session.aprompt.get_size().columns
+    with open(session.configuration.description) as f:
+        data = mdv.main(f.read(), cols=columns)
+    await session.aprint(ANSI(data))
+
+
 # Claim command
 
 def claim_parser():
@@ -95,7 +139,7 @@ def claim_parser():
     return parser
 
 
-async def claim(session, username):
+async def claim_command(session, username):
     # Get user
     try:
         token = claim_user(username)
@@ -126,7 +170,7 @@ def request_parser():
     return parser
 
 
-async def request(session, token):
+async def request_command(session, token):
 
     # Check session
     if session.configuration.interactive and session.interactive:
@@ -167,7 +211,7 @@ def submit_parser():
     return parser
 
 
-async def submit(session, token):
+async def submit_command(session, token):
     # Char dict
     char_dict = {
         "passed": ".",
@@ -232,7 +276,9 @@ def interact_parser():
     return parser
 
 
-async def interact(session):
+async def interact_command(session):
+    # Show help
+    await help_command(session)
 
     # Already an interactive session
     if session.interactive:

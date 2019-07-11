@@ -1,7 +1,7 @@
 
 
 from prompt_toolkit.application import get_app
-from prompt_toolkit.input.posix_pipe import PosixPipeInput
+from prompt_toolkit.input.defaults import create_pipe_input
 from prompt_toolkit.layout.screen import Size
 from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.eventloop.context import context
@@ -71,7 +71,8 @@ async def create_full_prompt(process):
     process.terminal_size_changed = size_changed
 
     # Prepare input stream
-    vt100_input = PosixPipeInput()
+    vt100_input = create_pipe_input()
+    type(vt100_input).responds_to_cpr = True
     await process.redirect_stdin(vt100_input._w)
 
     # Prepare output stream
@@ -102,5 +103,6 @@ async def create_full_prompt(process):
         with context() as context_id:
             return await prompt(*args, **kwargs)
 
+    aprompt.get_size = vt100_output.get_size
     aprint.sprint = sprint
     return aprint, aprompt
