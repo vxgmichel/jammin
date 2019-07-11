@@ -15,8 +15,8 @@ from prompt_toolkit.lexers import PygmentsLexer
 
 from .timing import format_attempt
 from .exception import log_exception
-from .user import get_user, claim_user
 from .configuration import get_configuration
+from .user import get_user, claim_user, get_users
 from .runner import create_runner, get_runner, prompt_to_pipe
 
 
@@ -303,7 +303,10 @@ async def interact_command(session):
     })
 
     def bottom_toolbar():
-        return HTML('This is a <b><style bg="ansired">Toolbar</style></b>!')
+        return HTML(
+            'There are '
+            f'<b><style bg="ansired">{len(get_users())} claimed users</style> '
+            'at the moment</b>!')
 
     while True:
         try:

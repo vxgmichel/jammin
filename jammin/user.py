@@ -14,3 +14,7 @@ def claim_user(user):
     token = secrets.token_hex(5)
     USERS[token] = user
     return token
+
+
+def get_users():
+    return dict(USERS)
