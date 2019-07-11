@@ -21,7 +21,7 @@ def keyboard_interrupt_control(loop=None):
 
 
 async def amain(namespace):
-    db = await DB.init(challenges_dir=namespace.challenges, dbfile=namespace.db)
+    db = await DB.init(challenges_dir=namespace.challenges, dburl=namespace.db)
     # b1 = await db.create_user('billy')
     # b2 = await db.create_user('bob')
     # # await db.create_user('billy')
@@ -68,11 +68,11 @@ def main(args=None):
     parser.add_argument('-t', '--tcp-port', type=int, default=8000,
                         help='port for the tcp interface')
 
-    parser.add_argument('--db', default='db.sqlite',
-                        help='Path to the database file')
+    parser.add_argument('--db', default='sqlite:///db.sqlite',
+                        help='Path to the database (default: sqlite:///db.sqlite)')
 
     parser.add_argument('--challenges', default='.',
-                        help='Path to the directory containing the challenges')
+                        help='Path to the directory containing the challenges (default: current directory)')
 
     namespace = parser.parse_args(args)
     return asyncio.run(amain(namespace))

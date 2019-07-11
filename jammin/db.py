@@ -84,16 +84,16 @@ def _parse_challenge_conf(conf_file):
 class DB:
 
     @classmethod
-    async def init(cls, challenges_dir='.', dbfile='test.db'):
+    async def init(cls, challenges_dir, dburl):
         engine = create_engine(
-            f"sqlite:///{dbfile}", strategy=ASYNCIO_STRATEGY
+            dburl, strategy=ASYNCIO_STRATEGY
         )
         challenges_dir = Path(challenges_dir)
         assert challenges_dir.is_dir()
 
         # Create the table
-        await engine.execute(CreateTable(users))
-        await engine.execute(CreateTable(attempts))
+        metadata.bind = engine.sync_engine
+        metadata.create_all()
         conn = await engine.connect()
 
         return cls(challenges_dir, engine, conn)
