@@ -1,3 +1,4 @@
+import os
 import secrets
 import asyncio
 from pathlib import Path
@@ -48,6 +49,10 @@ def _row_to_attempt(row):
     }
 
 
+def _is_executable(path):
+    return os.access(path, os.X_OK)
+
+
 def _parse_challenge_conf(conf_file):
     challenge = conf_file.parent.name
 
@@ -59,21 +64,26 @@ def _parse_challenge_conf(conf_file):
         except FileExistsError:
             conf['subject'] = ''
 
+        if 'reward' not in conf:
+            raise ValueError('Missing mandatory `reward` field')
+        conf['reward'] = conf.get('reward')
+        if not isinstance(conf['reward'], int):
+            raise ValueError('`reward` field must be an integer')
         conf['maxseed'] = conf.get('maxseed', 1000)
         if not isinstance(conf['maxseed'], int):
-            raise ValueError('maxseed must be an integer')
+            raise ValueError('`maxseed` field must be an integer')
         conf['interactive'] = conf.get('interactive', False)
         if not isinstance(conf['interactive'], bool):
-            raise ValueError('interactive must be a boolean')
-        conf['runner'] = Path(str(conf.get('runner', 'runner.py')))
-        if conf['runner'].is_file():
-            raise ValueError('runner must be a valid file')
+            raise ValueError('`interactive` field must be a boolean')
+        conf['runner'] = conf_file.parent / str(conf.get('runner', 'runner.py'))
+        if not conf['runner'].is_file() or not _is_executable(conf['runner']):
+            raise ValueError(f"`{conf['runner']}` is not a valid executable file")
         if 'solver' not in conf:
             conf['solver'] = None
         else:
             conf['solver'] = Path(str(conf.get['solver']))
-            if conf['solver'].is_file():
-                raise ValueError('solver must be a valid file')
+            if not conf['solver'].is_file() or not _is_executable(conf['solver']):
+                raise ValueError(f"`{conf['solver']}` is not a valid executable file")
 
     except Exception as exc:
         raise RuntimeError(f'Configuration error for challenge `{challenge}` : {exc}') from exc
