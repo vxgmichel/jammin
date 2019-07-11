@@ -295,8 +295,8 @@ async def interact_command(session):
         'scrollbar.button': 'bg:#222222',
     })
 
-    await session.aprint(HTML(
-        "<skyblue>Welcome to the interactive console!</skyblue>"))
+    def bottom_toolbar():
+        return HTML('This is a <b><style bg="ansired">Toolbar</style></b>!')
 
     while True:
         try:
@@ -306,6 +306,7 @@ async def interact_command(session):
                 lexer=lexer,
                 completer=completer,
                 style=style,
+                bottom_toolbar=bottom_toolbar,
                 complete_while_typing=True)
             await run_command(
                 command, session.aprint, session.aprompt, interactive=True)
