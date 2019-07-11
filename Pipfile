@@ -5,6 +5,7 @@ verify_ssl = true
 
 [packages]
 jammin = {editable = true,path = "."}
+mdv = "*"
 
 [dev-packages]
 pytest = "*"
