@@ -39,6 +39,12 @@ def get_command_dict():
     }
 
 
+def get_user_command_dict():
+    dct = get_command_dict()
+    dct.pop("interact")
+    return dct
+
+
 def get_command(name, aprint):
     command, get_parser = get_command_dict()[name]
     parser = get_parser()
@@ -106,7 +112,7 @@ async def help_command(session):
         "<skyblue>Welcome this SSH problem solving interface! :)</skyblue>"))
     await session.aprint()
     await session.aprint("""Here the list of commands:""")
-    for name, (_, get_parser) in get_command_dict().items():
+    for name, (_, get_parser) in get_user_command_dict().items():
         await session.aprint(f" - {name:9s}: {get_parser().description}")
     await session.aprint()
 
@@ -132,10 +138,10 @@ async def show_command(session):
 def claim_parser():
     parser = argparse.ArgumentParser(
         prog="claim",
-        description='Request new input data')
+        description='Claim a username and receive a token')
     parser.add_argument(
         'username', metavar='USER', type=str,
-        help='Claim a username and receive a token')
+        help="username to claim")
     return parser
 
 
@@ -277,17 +283,18 @@ def interact_parser():
 
 
 async def interact_command(session):
-    # Show help
-    await help_command(session)
 
     # Already an interactive session
     if session.interactive:
         return
 
+    # Show help
+    await help_command(session)
+
     history = InMemoryHistory()
     lexer = PygmentsLexer(BashLexer)
     completer = WordCompleter(
-        ["claim", "request", "submit", "interact"], sentence=True)
+        get_user_command_dict(), sentence=True)
     style = Style.from_dict({
         'completion-menu.completion': 'bg:#008888 #ffffff',
         'completion-menu.completion.current': 'bg:#00aaaa #000000',
