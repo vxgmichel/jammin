@@ -137,16 +137,42 @@ class DB:
     async def get_user(self, token):
         result = await self.conn.execute(
             users.select().where(users.c.token == token))
-        return _row_to_user(await result.fetchone())
+        row = await result.fetchone()
+        return _row_to_user(row) if row is not None else None
 
     async def get_users(self):
         result = await self.conn.execute(users.select())
         return [_row_to_user(row) for row in await result.fetchall()]
 
     async def create_attempt(self, user, challenge, succeeded):
-        ret = await self.conn.execute(attempts.insert().values(
-            user=user, challenge=challenge, succeeded=succeeded
-        ))
+        async with self.conn.begin() as trans:
+            await self.conn.execute(attempts.insert().values(
+                user=user, challenge=challenge, succeeded=succeeded
+                    ))
+
+            if succeeded:
+                # Add score if it's our first success of the challenge
+                result = await self.conn.execute(
+                    attempts.select().where(attempts.c.user==user)
+                    .where(attempts.c.challenge==challenge)
+                    .where(attempts.c.succeeded==True)
+                )
+                if await result.scalar() != 1:
+                    return
+
+                try:
+                    challenge_score = self.get_challenges()[challenge]['reward']
+                except KeyError:
+                    raise ValueError(f'Unknown challenge {challenge}')
+
+                result = await self.conn.execute(
+                    users.select().where(users.c.nick==user)
+                )
+                *_, score = await result.fetchone()
+                score += challenge_score
+                await self.conn.execute(
+                    users.update().where(users.c.nick==user).values(score=score)
+                )
 
     async def get_user_attempts(self, nick):
         result = await self.conn.execute(attempts.select().where(attempts.c.user==nick))
