@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from .tcp import start_tcp_server
 from .ssh import start_ssh_server
 from .configuration import set_configuration
+from .db import DB
 
 
 @contextmanager
@@ -20,6 +21,18 @@ def keyboard_interrupt_control(loop=None):
 
 
 async def amain(namespace):
+    db = await DB.init(challenges_dir=namespace.challenges, dbfile=namespace.db)
+    # b1 = await db.create_user('billy')
+    # b2 = await db.create_user('bob')
+    # # await db.create_user('billy')
+    # b3 = await db.get_user('billy')
+    # users = await db.get_users()
+    # await db.create_attempt('billy', 'foo', False)
+    # await db.create_attempt('billy', 'bar', True)
+    # await db.create_attempt('bob', 'foo', False)
+    # res = await db.get_user_attempts('billy')
+    # res2 = await db.get_challenge_attempts('foo')
+    # c = db.get_challenges()
     set_configuration(namespace)
     if not hasattr(namespace, "started"):
         namespace.started = asyncio.Event()
@@ -55,27 +68,13 @@ def main(args=None):
     parser.add_argument('-t', '--tcp-port', type=int, default=8000,
                         help='port for the tcp interface')
 
-    parser.add_argument('-m', '--maxseed', type=int, default=1000,
-                        help='the maximum seed value')
+    parser.add_argument('--db', default='db.sqlite',
+                        help='Path to the database file')
 
-    parser.add_argument('-n', '--ntests', type=int, default=None,
-                        help='the number of tests to run, defaults to all')
-
-    parser.add_argument('-i', '--interactive', action="store_true",
-                        help='indicates an interactive problem')
-
-    parser.add_argument('description', metavar='DESC', type=str,
-                        help='the markdown file containing the problem description')
-
-    parser.add_argument('runner', metavar='RUNNER', type=str,
-                        help='the problem runner program')
-
-    parser.add_argument('solver', metavar='SOLVER', type=str,
-                        help='a valid solution')
+    parser.add_argument('--challenges', default='.',
+                        help='Path to the directory containing the challenges')
 
     namespace = parser.parse_args(args)
-    namespace.runner = [namespace.runner]
-    namespace.solver = [namespace.solver]
     return asyncio.run(amain(namespace))
 
 
