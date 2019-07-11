@@ -43,8 +43,8 @@ with open(recv_path, 'r', buffering=1) as recv:
         try:
             assert result == int(line)
         except AssertionError:
-            print('FAILED')
+            print('FAILED', flush=True)
         except Exception:
-            print('ERROR')
+            print('ERROR', flush=True)
         else:
-            print('PASSED')
+            print('PASSED', flush=True)
